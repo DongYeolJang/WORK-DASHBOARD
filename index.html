@@ -18,15 +18,18 @@
 :root{
   --bg:#f7f7f5;--surface:#fff;--surface2:#f2f2f0;--border:#e0e0e0;--border2:#c8c8c8;
   --text:#1a1a1a;--text2:#555;--text3:#999;--accent:#1a1a1a;--accent-text:#fff;
-  --hover:#f0f0f0;--radius:9px;
+  --hover:#f0f0f0;--radius:9px;--fs:15px;
   --safe-bottom:env(safe-area-inset-bottom,0px);--safe-top:env(safe-area-inset-top,0px);
+  /* 캘린더 이벤트 색상: 다크모드에서도 읽기 쉽게 고정 */
+  --cal-evt-bg:rgba(91,141,239,0.18);--cal-evt-text:#2a5fc4;
 }
-[data-theme="dark"]{--bg:#111;--surface:#1e1e1e;--surface2:#272727;--border:#333;--border2:#444;--text:#f0f0f0;--text2:#aaa;--text3:#666;--accent:#5B8DEF;--accent-text:#fff;--hover:#2a2a2a;}
+[data-theme="dark"]{--bg:#111;--surface:#1e1e1e;--surface2:#272727;--border:#333;--border2:#444;--text:#f0f0f0;--text2:#aaa;--text3:#666;--accent:#5B8DEF;--accent-text:#fff;--hover:#2a2a2a;
+  --cal-evt-bg:rgba(255,255,255,0.12);--cal-evt-text:#e0e8ff;}
 [data-theme="blue"]{--bg:#eef3fb;--surface:#fff;--surface2:#e8f0ff;--border:#ccd8f4;--border2:#aabfe8;--text:#1a2a4a;--text2:#4060a0;--text3:#8aa0c8;--accent:#2563eb;--accent-text:#fff;--hover:#dce8ff;}
 [data-theme="green"]{--bg:#edf7f0;--surface:#fff;--surface2:#e0f5e8;--border:#b8dfc8;--border2:#90c8a8;--text:#1a3828;--text2:#306840;--text3:#70a880;--accent:#16a34a;--accent-text:#fff;--hover:#d0f0dc;}
 [data-theme="warm"]{--bg:#fdf8f3;--surface:#fff;--surface2:#faeee4;--border:#e8d0bc;--border2:#d0b098;--text:#3a2010;--text2:#784830;--text3:#b88060;--accent:#c2410c;--accent-text:#fff;--hover:#f5e4d4;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overflow:hidden;font-size:15px}
+html,body{height:100%;overflow:hidden;font-size:var(--fs,15px)}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;transition:background .2s,color .2s}
 #auth-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px}
 .auth-card{background:var(--surface);border:0.5px solid var(--border);border-radius:16px;padding:28px 24px;width:100%;max-width:360px}
@@ -160,7 +163,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .cal-cell.other-month .cal-date{color:var(--text3)}
 .cal-cell.today .cal-date{background:var(--accent);color:var(--accent-text);border-radius:50%}
 .cal-date{font-size:11px;font-weight:600;color:var(--text);margin-bottom:2px;width:20px;height:20px;display:flex;align-items:center;justify-content:center}
-.cal-evt-preview{font-size:9px;padding:1px 4px;border-radius:2px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5}
+.cal-evt-preview{font-size:9px;padding:1px 4px;border-radius:2px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5;background:var(--cal-evt-bg)!important;color:var(--cal-evt-text)!important;}
 .cal-detail{border-top:0.5px solid var(--border);padding:11px 14px;overflow-y:auto;flex:1;background:var(--bg)}
 .cal-detail-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .cal-detail-title{font-size:13px;font-weight:600;color:var(--text)}
@@ -203,12 +206,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ts-bar-fill{height:100%;border-radius:4px;transition:width .3s,background .3s}
 .ts-bar-label{font-size:12px;color:var(--text3);white-space:nowrap;min-width:80px;text-align:right}
 .ts-bar-label b{color:var(--text)}
-.ts-table{width:100%;border-collapse:collapse}
-.ts-table th{font-size:11px;color:var(--text3);font-weight:500;padding:6px 9px;text-align:left;border-bottom:0.5px solid var(--border);text-transform:uppercase;letter-spacing:.04em}
-.ts-table td{font-size:13px;padding:8px 9px;border-bottom:0.5px solid var(--border);vertical-align:middle;color:var(--text)}
+.ts-table{width:100%;border-collapse:collapse;table-layout:fixed}
+.ts-table th{font-size:11px;color:var(--text3);font-weight:500;padding:6px 9px;text-align:left;border-bottom:0.5px solid var(--border);text-transform:uppercase;letter-spacing:.04em;position:relative;overflow:hidden;white-space:nowrap}
+.ts-table th .col-resizer{position:absolute;right:0;top:0;bottom:0;width:5px;cursor:col-resize;background:transparent;z-index:1}
+.ts-table th .col-resizer:hover,.ts-table th .col-resizer.dragging{background:var(--accent);opacity:.4}
+.ts-table td{font-size:13px;padding:8px 9px;border-bottom:0.5px solid var(--border);vertical-align:middle;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #app-shell.mobile .ts-table th{font-size:10px;padding:5px 6px}
 #app-shell.mobile .ts-table td{font-size:12px;padding:7px 6px}
 .ts-table tr:hover td{background:var(--hover)}
+/* 글씨 크기 설정 */
+.fs-control{display:flex;align-items:center;gap:10px}
+.fs-btn{width:32px;height:32px;border:0.5px solid var(--border2);border-radius:7px;background:var(--surface);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.fs-btn:hover{background:var(--hover)}
+.fs-value{font-size:13px;font-weight:500;color:var(--text);min-width:32px;text-align:center}
 .ts-total{margin-top:9px;text-align:right;font-size:13px;color:var(--text3)}
 .ts-total span{font-weight:600;color:var(--text)}
 .del-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px;padding:0 2px}
@@ -358,8 +368,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           </div>
         </div>
         <div style="overflow-x:auto">
-          <table class="ts-table" style="min-width:420px">
-            <thead><tr><th>업무일</th><th>번호</th><th>프로젝트명</th><th>업무내용</th><th>시간</th><th></th></tr></thead>
+          <table class="ts-table" id="ts-table">
+            <thead><tr>
+              <th style="width:110px">업무일<div class="col-resizer" data-col="0"></div></th>
+              <th style="width:80px">번호<div class="col-resizer" data-col="1"></div></th>
+              <th style="width:130px">프로젝트명<div class="col-resizer" data-col="2"></div></th>
+              <th>업무내용<div class="col-resizer" data-col="3"></div></th>
+              <th style="width:60px">시간<div class="col-resizer" data-col="4"></div></th>
+              <th style="width:70px"></th>
+            </tr></thead>
             <tbody id="ts-tbody"></tbody>
           </table>
         </div>
@@ -383,6 +400,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
             </div>
           </div>
           <button class="logout-btn-full" id="btn-logout">로그아웃</button>
+        </div>
+        <div class="settings-section">
+          <div class="settings-section-title">글씨 크기</div>
+          <div class="settings-card">
+            <div class="settings-row">
+              <div><div class="settings-row-label">텍스트 크기</div><div class="settings-row-desc" id="fs-desc">보통 (15px)</div></div>
+              <div class="fs-control">
+                <button class="fs-btn" id="btn-fs-down">−</button>
+                <span class="fs-value" id="fs-val">15</span>
+                <button class="fs-btn" id="btn-fs-up">+</button>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="settings-section">
           <div class="settings-section-title">화면 모드</div>
@@ -837,8 +867,9 @@ document.addEventListener('click', function(e) {
   // cal edit/del
   if (e.target.dataset.editEvt) { openEditEvent(e.target.dataset.editEvt); return; }
   if (e.target.dataset.delEvt) { delEvt(e.target.dataset.delEvt); return; }
-  // ts del
+  // ts del / edit
   if (e.target.dataset.delTs) { delTs(e.target.dataset.delTs); return; }
+  if (e.target.dataset.editTs) { openEditTs(e.target.dataset.editTs); return; }
   // modal close (overlay)
   if (e.target.id === 'modal') { closeModal(); return; }
 });
@@ -1226,13 +1257,51 @@ function renderTs() {
     return '<tr><td>' + r.date + '</td>'
       + '<td><span style="font-family:monospace;font-size:12px;background:var(--accent);color:var(--accent-text);padding:2px 7px;border-radius:4px;font-weight:700">' + (r.pno||'-') + '</span></td>'
       + '<td><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:' + r.color + ';display:inline-block;flex-shrink:0"></span>' + r.pname + '</span></td>'
-      + '<td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + (r.memo||'') + '">' + (r.memo||'-') + '</td>'
+      + '<td title="' + (r.memo||'') + '">' + (r.memo||'-') + '</td>'
       + '<td><b>' + r.hours + 'h</b></td>'
-      + '<td><button class="del-btn" data-del-ts="' + r.id + '">&#215;</button></td></tr>';
+      + '<td style="white-space:nowrap">'
+      + '<button class="action-btn" data-edit-ts="' + r.id + '" style="margin-right:3px">편집</button>'
+      + '<button class="del-btn" data-del-ts="' + r.id + '">&#215;</button>'
+      + '</td></tr>';
   }).join('');
   document.getElementById('ts-total').innerHTML = '총 사용시간 <span>' + tsRows.reduce(function(s,r){ return s+r.hours; }, 0) + 'h</span>';
 }
 function delTs(id) { fsDelete('tsRows', id); }
+function openEditTs(id) {
+  var r = tsRows.find(function(x){ return x.id === id; }); if (!r) return;
+  showModal('<h3>타임시트 편집</h3>'
+    + '<div class="form-row"><label>업무일</label><input type="date" id="ets-date" value="' + (r.date||'') + '"></div>'
+    + '<div class="form-row"><label>프로젝트</label><select id="ets-proj"><option value="">선택</option>' + buildProjOptgroups(r.projId||null) + '</select></div>'
+    + '<div class="form-row"><label>사용시간(h)</label><input type="number" id="ets-hours" min=".5" max="8" step=".5" value="' + (r.hours||'') + '"></div>'
+    + '<div class="form-row"><label>업무내용</label><textarea id="ets-memo">' + (r.memo||'') + '</textarea></div>'
+    + '<div class="modal-actions"><button class="btn-cancel" id="mc-btn">취소</button><button class="btn-save" id="ms-btn">저장</button></div>');
+  // 기존 프로젝트 선택
+  var sel = document.getElementById('ets-proj');
+  var origProjId = r.projId || null;
+  if (origProjId && sel) {
+    // projId로 역추적: tsRows에는 projId가 없을 수도 있으므로 pname으로 찾기
+    var matchP = projects.find(function(p){ return p.name === r.pname; });
+    if (matchP) sel.value = matchP.id;
+  }
+  document.getElementById('mc-btn').onclick = closeModal;
+  document.getElementById('ms-btn').onclick = function() {
+    var newDate = document.getElementById('ets-date').value;
+    var newHours = parseFloat(document.getElementById('ets-hours').value);
+    var newMemo = document.getElementById('ets-memo').value.trim();
+    var newPid = document.getElementById('ets-proj').value;
+    if (!newDate || !newHours) { alert('업무일과 사용시간을 입력해주세요.'); return; }
+    // 8h 초과 체크 (자기 자신 제외)
+    var usedExcludingSelf = tsRows.filter(function(x){ return x.id !== id && x.date === newDate; }).reduce(function(s,x){ return s+x.hours; }, 0);
+    if (usedExcludingSelf + newHours > 8) { alert('해당 날짜 총 시간이 8h를 초과합니다.'); return; }
+    var p = projects.find(function(x){ return x.id === newPid; });
+    var data = {date:newDate, hours:newHours, memo:newMemo,
+      pno: p ? (p.number||'') : r.pno,
+      pname: p ? p.name : r.pname,
+      projId: newPid || null,
+      color: p ? gc(p.cat) : r.color};
+    fsUpdate('tsRows', id, data).then(closeModal);
+  };
+}
 
 // ── MODAL ──
 function showModal(html) {
@@ -1242,7 +1311,64 @@ function showModal(html) {
 function closeModal() { document.getElementById('modal').style.display = 'none'; }
 function gv(id) { var el = document.getElementById(id); return el ? el.value || '' : ''; }
 
-// ── INIT ──
+// ── Font Size ──
+var fsLevels = [12,13,14,15,16,17,18,20];
+var fsNames = ['아주 작게','작게','약간 작게','보통','약간 크게','크게','더 크게','아주 크게'];
+function getCurrentFsIdx() {
+  var cur = parseInt(localStorage.getItem('dash_fs') || '15');
+  var idx = fsLevels.indexOf(cur);
+  return idx >= 0 ? idx : 3;
+}
+function applyFs(idx) {
+  var px = fsLevels[idx];
+  document.documentElement.style.setProperty('--fs', px + 'px');
+  localStorage.setItem('dash_fs', px);
+  var val = document.getElementById('fs-val');
+  var desc = document.getElementById('fs-desc');
+  if (val) val.textContent = px;
+  if (desc) desc.textContent = fsNames[idx] + ' (' + px + 'px)';
+}
+document.addEventListener('click', function(e) {
+  if (e.target.id === 'btn-fs-up') {
+    var i = getCurrentFsIdx(); if (i < fsLevels.length-1) applyFs(i+1);
+  }
+  if (e.target.id === 'btn-fs-down') {
+    var i2 = getCurrentFsIdx(); if (i2 > 0) applyFs(i2-1);
+  }
+});
+
+// ── Column Resize ──
+(function() {
+  var startX, startW, th, colIdx;
+  document.addEventListener('mousedown', startResize);
+  document.addEventListener('touchstart', startResize, {passive:false});
+  function startResize(e) {
+    var r = e.target.closest('.col-resizer'); if (!r) return;
+    e.preventDefault();
+    colIdx = parseInt(r.dataset.col);
+    th = r.parentElement;
+    startX = e.touches ? e.touches[0].clientX : e.clientX;
+    startW = th.offsetWidth;
+    r.classList.add('dragging');
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, {passive:false});
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchend', onUp);
+  }
+  function onMove(e) {
+    if (!th) return;
+    var x = e.touches ? e.touches[0].clientX : e.clientX;
+    var newW = Math.max(50, startW + x - startX);
+    th.style.width = newW + 'px';
+  }
+  function onUp() {
+    if (th) { th.querySelector('.col-resizer').classList.remove('dragging'); th = null; }
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    document.removeEventListener('touchend', onUp);
+  }
+})();
 (function() {
   setTheme(localStorage.getItem('dash_theme') || 'light');
   setLayout(localStorage.getItem('dash_layout') || (window.innerWidth <= 430 ? 'mobile' : 'desktop'));
