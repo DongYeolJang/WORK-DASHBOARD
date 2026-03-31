@@ -1061,20 +1061,24 @@ function renderToday() {
 }
 function toggleT(id, val) {
   var done = val === 'true' || val === true;
-  var doneAt = done ? Date.now() : null;
+  // 완료 날짜 = today task가 속한 날짜 (체크 시점이 아님)
+  var taskDate = null;
+  var task = null;
+  Object.keys(todayTasksByDate).forEach(function(dateKey) {
+    todayTasksByDate[dateKey].forEach(function(t) {
+      if (t.id === id) { task = t; taskDate = dateKey; }
+    });
+  });
+  var doneAt = done && taskDate ? new Date(taskDate).getTime() : null;
   fsUpdate('todayTasks', id, {done: done, doneAt: doneAt});
   // 연동: 프로젝트 하위항목 동기화
-  var task = null;
-  Object.values(todayTasksByDate).forEach(function(arr) {
-    arr.forEach(function(t) { if (t.id === id) task = t; });
-  });
   if (task && task.projId && task.text) {
     var p = projects.find(function(x) { return x.id === task.projId; });
     if (p && p.subtasks) {
       var subs = p.subtasks.slice();
       var idx = subs.findIndex(function(s) { return s.text === task.text && (s.cat||'') === (task.subCat||''); });
       if (idx >= 0) {
-        subs[idx] = Object.assign({}, subs[idx], {done: done, doneAt: done ? Date.now() : null});
+        subs[idx] = Object.assign({}, subs[idx], {done: done, doneAt: doneAt});
         fsUpdate('projects', p.id, {subtasks: subs});
       }
     }
