@@ -1059,7 +1059,27 @@ function renderToday() {
   body.innerHTML = items + '<div class="drop-zone">하위 항목을 여기로 드래그하세요</div>';
   setupDrop();
 }
-function toggleT(id, val) { fsUpdate('todayTasks', id, {done: val === 'true' || val === true}); }
+function toggleT(id, val) {
+  var done = val === 'true' || val === true;
+  var doneAt = done ? Date.now() : null;
+  fsUpdate('todayTasks', id, {done: done, doneAt: doneAt});
+  // 연동: 프로젝트 하위항목 동기화
+  var task = null;
+  Object.values(todayTasksByDate).forEach(function(arr) {
+    arr.forEach(function(t) { if (t.id === id) task = t; });
+  });
+  if (task && task.projId && task.text) {
+    var p = projects.find(function(x) { return x.id === task.projId; });
+    if (p && p.subtasks) {
+      var subs = p.subtasks.slice();
+      var idx = subs.findIndex(function(s) { return s.text === task.text && (s.cat||'') === (task.subCat||''); });
+      if (idx >= 0) {
+        subs[idx] = Object.assign({}, subs[idx], {done: done, doneAt: done ? Date.now() : null});
+        fsUpdate('projects', p.id, {subtasks: subs});
+      }
+    }
+  }
+}
 function delT(id) { fsDelete('todayTasks', id); }
 
 function openAddTodayTask() {
@@ -1088,9 +1108,34 @@ function saveTT(editId) {
   var pid = gv('f-tp'), p = projects.find(function(x){ return x.id===pid; });
   var cat = gv('f-tc'), key = dk(taskViewDate);
   if (editId) {
-    fsUpdate('todayTasks', editId, {text:text, subCat:cat, projId:pid||null, projName:p?p.name:'기타', projColor:p?gc(p.cat):'#999'}).then(closeModal);
+    // 편집: 기존 task 찾아서 원본 text/cat/projId 파악
+    var oldTask = null;
+    Object.values(todayTasksByDate).forEach(function(arr) {
+      arr.forEach(function(t) { if (t.id === editId) oldTask = t; });
+    });
+    var updateData = {text:text, subCat:cat, projId:pid||null, projName:p?p.name:'기타', projColor:p?gc(p.cat):'#999'};
+    fsUpdate('todayTasks', editId, updateData).then(function() {
+      // 프로젝트 하위항목도 동기화 (원본 텍스트 기준으로 찾아서 수정)
+      if (oldTask && oldTask.projId) {
+        var oldP = projects.find(function(x) { return x.id === oldTask.projId; });
+        if (oldP && oldP.subtasks) {
+          var subs = oldP.subtasks.slice();
+          var idx = subs.findIndex(function(s) { return s.text === oldTask.text && (s.cat||'') === (oldTask.subCat||''); });
+          if (idx >= 0) {
+            subs[idx] = Object.assign({}, subs[idx], {text: text, cat: cat});
+            fsUpdate('projects', oldP.id, {subtasks: subs});
+          }
+        }
+      }
+      // 프로젝트가 변경된 경우 새 프로젝트에도 하위항목 추가
+      if (p && pid !== (oldTask && oldTask.projId)) {
+        var exists = (p.subtasks||[]).some(function(s){ return s.text===text && s.cat===cat; });
+        if (!exists) fsUpdate('projects', pid, {subtasks: (p.subtasks||[]).concat([{cat:cat||'',text:text,done:false,doneAt:null}])});
+      }
+    });
+    closeModal();
   } else {
-    fsAdd('todayTasks', {text:text, subCat:cat, projId:pid||null, projName:p?p.name:'기타', projColor:p?gc(p.cat):'#999', done:false, dateKey:key}).then(function() {
+    fsAdd('todayTasks', {text:text, subCat:cat, projId:pid||null, projName:p?p.name:'기타', projColor:p?gc(p.cat):'#999', done:false, doneAt:null, dateKey:key}).then(function() {
       if (p) {
         var exists = (p.subtasks||[]).some(function(s){ return s.text===text && s.cat===cat; });
         if (!exists) fsUpdate('projects', pid, {subtasks: (p.subtasks||[]).concat([{cat:cat||'',text:text,done:false,doneAt:null}])});
@@ -1253,7 +1298,7 @@ function renderTs() {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:22px">입력된 내역이 없습니다</td></tr>';
     document.getElementById('ts-total').textContent = ''; return;
   }
-  tbody.innerHTML = tsRows.slice().sort(function(a,b){ return a.date.localeCompare(b.date); }).map(function(r) {
+  tbody.innerHTML = tsRows.slice().sort(function(a,b){ return b.date.localeCompare(a.date); }).map(function(r) {
     return '<tr><td>' + r.date + '</td>'
       + '<td><span style="font-family:monospace;font-size:12px;background:var(--accent);color:var(--accent-text);padding:2px 7px;border-radius:4px;font-weight:700">' + (r.pno||'-') + '</span></td>'
       + '<td><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:' + r.color + ';display:inline-block;flex-shrink:0"></span>' + r.pname + '</span></td>'
