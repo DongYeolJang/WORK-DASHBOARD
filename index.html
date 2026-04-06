@@ -528,27 +528,42 @@ function doAuth() {
   var email = document.getElementById('auth-email').value.trim();
   var pw = document.getElementById('auth-pw').value;
   var err = document.getElementById('auth-err');
+  var btn = document.getElementById('auth-submit');
   err.textContent = '';
   if (!email || !pw) { err.textContent = '이메일과 비밀번호를 입력해주세요.'; return; }
+  btn.textContent = '처리 중...';
+  btn.disabled = true;
   var msgs = {
     'auth/user-not-found':'등록되지 않은 이메일입니다.',
     'auth/wrong-password':'비밀번호가 틀렸습니다.',
     'auth/email-already-in-use':'이미 사용 중인 이메일입니다.',
     'auth/weak-password':'비밀번호는 6자 이상이어야 합니다.',
     'auth/invalid-email':'이메일 형식이 올바르지 않습니다.',
-    'auth/invalid-credential':'이메일 또는 비밀번호가 올바르지 않습니다.'
+    'auth/invalid-credential':'이메일 또는 비밀번호가 올바르지 않습니다.',
+    'auth/network-request-failed':'네트워크 오류입니다. 인터넷 연결을 확인해주세요.',
+    'auth/too-many-requests':'로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.',
+    'auth/user-disabled':'비활성화된 계정입니다.'
   };
+  function resetBtn(label) {
+    btn.textContent = label || (authMode === 'login' ? '로그인' : '회원가입');
+    btn.disabled = false;
+  }
   if (authMode === 'login') {
-    auth.signInWithEmailAndPassword(email, pw).catch(function(e) {
-      err.textContent = msgs[e.code] || e.message;
-    });
+    auth.signInWithEmailAndPassword(email, pw)
+      .then(function() { resetBtn(); })
+      .catch(function(e) {
+        err.textContent = msgs[e.code] || ('오류: ' + e.message);
+        resetBtn();
+      });
   } else {
     var name = document.getElementById('auth-name').value.trim() || email.split('@')[0];
-    auth.createUserWithEmailAndPassword(email, pw).then(function(cr) {
-      return cr.user.updateProfile({displayName: name});
-    }).catch(function(e) {
-      err.textContent = msgs[e.code] || e.message;
-    });
+    auth.createUserWithEmailAndPassword(email, pw)
+      .then(function(cr) { return cr.user.updateProfile({displayName: name}); })
+      .then(function() { resetBtn(); })
+      .catch(function(e) {
+        err.textContent = msgs[e.code] || ('오류: ' + e.message);
+        resetBtn();
+      });
   }
 }
 function doLogout() {
