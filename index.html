@@ -349,13 +349,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="ts-body">
         <div class="ts-form">
           <div class="ts-row1">
-            <div>
-              <label>업무일</label>
-              <div style="display:flex;gap:5px;align-items:center">
-                <input type="date" id="ts-date" style="flex:1">
-                <button class="icon-btn" id="btn-ts-pick-tasks" title="완료된 할일 선택" style="padding:5px 8px;font-size:12px;white-space:nowrap;flex-shrink:0">&#10003; 선택</button>
-              </div>
-            </div>
+            <div><label>업무일</label><input type="date" id="ts-date"></div>
             <div><label>프로젝트 번호</label><input type="text" id="ts-pno" readonly style="background:var(--surface2);color:var(--text3)"></div>
             <div><label>프로젝트명</label><select id="ts-pname"><option value="">선택</option></select></div>
             <div><label>사용시간(h)</label><input type="number" id="ts-hours" min=".5" max="8" step=".5" placeholder="0"></div>
@@ -528,42 +522,27 @@ function doAuth() {
   var email = document.getElementById('auth-email').value.trim();
   var pw = document.getElementById('auth-pw').value;
   var err = document.getElementById('auth-err');
-  var btn = document.getElementById('auth-submit');
   err.textContent = '';
   if (!email || !pw) { err.textContent = '이메일과 비밀번호를 입력해주세요.'; return; }
-  btn.textContent = '처리 중...';
-  btn.disabled = true;
   var msgs = {
     'auth/user-not-found':'등록되지 않은 이메일입니다.',
     'auth/wrong-password':'비밀번호가 틀렸습니다.',
     'auth/email-already-in-use':'이미 사용 중인 이메일입니다.',
     'auth/weak-password':'비밀번호는 6자 이상이어야 합니다.',
     'auth/invalid-email':'이메일 형식이 올바르지 않습니다.',
-    'auth/invalid-credential':'이메일 또는 비밀번호가 올바르지 않습니다.',
-    'auth/network-request-failed':'네트워크 오류입니다. 인터넷 연결을 확인해주세요.',
-    'auth/too-many-requests':'로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.',
-    'auth/user-disabled':'비활성화된 계정입니다.'
+    'auth/invalid-credential':'이메일 또는 비밀번호가 올바르지 않습니다.'
   };
-  function resetBtn(label) {
-    btn.textContent = label || (authMode === 'login' ? '로그인' : '회원가입');
-    btn.disabled = false;
-  }
   if (authMode === 'login') {
-    auth.signInWithEmailAndPassword(email, pw)
-      .then(function() { resetBtn(); })
-      .catch(function(e) {
-        err.textContent = msgs[e.code] || ('오류: ' + e.message);
-        resetBtn();
-      });
+    auth.signInWithEmailAndPassword(email, pw).catch(function(e) {
+      err.textContent = msgs[e.code] || e.message;
+    });
   } else {
     var name = document.getElementById('auth-name').value.trim() || email.split('@')[0];
-    auth.createUserWithEmailAndPassword(email, pw)
-      .then(function(cr) { return cr.user.updateProfile({displayName: name}); })
-      .then(function() { resetBtn(); })
-      .catch(function(e) {
-        err.textContent = msgs[e.code] || ('오류: ' + e.message);
-        resetBtn();
-      });
+    auth.createUserWithEmailAndPassword(email, pw).then(function(cr) {
+      return cr.user.updateProfile({displayName: name});
+    }).catch(function(e) {
+      err.textContent = msgs[e.code] || e.message;
+    });
   }
 }
 function doLogout() {
@@ -785,16 +764,9 @@ function renderPD(p) {
     if (!catGroups[key]) catGroups[key] = [];
     catGroups[key].push({s:s, origIdx:origIdx});
   });
-  // 분류 그룹 내부: 완료(doneAt 있음) → doneAt 오름차순(오래된게 위), 미완료 → 등록순, 완료항목은 맨 아래
   var catKeys = Object.keys(catGroups).sort(function(a,b){ return b.localeCompare(a,'ko'); });
   var subsHtml = catKeys.map(function(cat) {
-    var items = catGroups[cat].slice().sort(function(a,b){
-      var aDone = a.s.done ? 1 : 0, bDone = b.s.done ? 1 : 0;
-      if (aDone !== bDone) return aDone - bDone; // 미완료 먼저
-      if (aDone && bDone) return (a.s.doneAt||0) - (b.s.doneAt||0); // 완료된 것: 오래된게 위(최근 완료가 맨 아래)
-      return a.origIdx - b.origIdx;
-    });
-    var html = items.map(function(item) {
+    var items = catGroups[cat].map(function(item) {
       var s = item.s, i = item.origIdx;
       return '<div class="subtask-item" draggable="true" data-drag-pid="' + p.id + '" data-drag-idx="' + i + '">'
         + '<div class="subtask-check' + (s.done?' done':'') + '" data-sub-toggle="' + p.id + ',' + i + '"></div>'
@@ -808,7 +780,7 @@ function renderPD(p) {
         + '</div>'
         + '</div>';
     }).join('');
-    return '<div class="subtask-group-label">' + cat + '</div>' + html;
+    return '<div class="subtask-group-label">' + cat + '</div>' + items;
   }).join('');
   if (!subsHtml) subsHtml = '<div style="font-size:12px;color:var(--text3);padding:5px 0 7px">하위 항목 없음</div>';
   return '<div class="proj-detail">'
@@ -895,17 +867,9 @@ document.addEventListener('click', function(e) {
   // cal edit/del
   if (e.target.dataset.editEvt) { openEditEvent(e.target.dataset.editEvt); return; }
   if (e.target.dataset.delEvt) { delEvt(e.target.dataset.delEvt); return; }
-  // ts pick tasks
-  if (e.target.id === 'btn-ts-pick-tasks') { openPickTasks(); return; }
+  // ts del / edit
+  if (e.target.dataset.delTs) { delTs(e.target.dataset.delTs); return; }
   if (e.target.dataset.editTs) { openEditTs(e.target.dataset.editTs); return; }
-  // pick-task item 선택
-  if (e.target.closest('.pick-task-item')) {
-    var el = e.target.closest('.pick-task-item');
-    el.classList.toggle('selected');
-    return;
-  }
-  // pick-task 확인
-  if (e.target.id === 'btn-pick-confirm') { confirmPickTasks(); return; }
   // modal close (overlay)
   if (e.target.id === 'modal') { closeModal(); return; }
 });
@@ -1331,82 +1295,7 @@ function addTsRow() {
     document.querySelectorAll('.ts-completed-item').forEach(function(i){ i.classList.remove('selected'); });
   });
 }
-// ── Timesheet: 날짜 기반 완료 태스크 선택 팝업 ──
-function openPickTasks() {
-  var ds = document.getElementById('ts-date').value;
-  if (!ds) { alert('업무일을 먼저 선택해주세요.'); return; }
-  var tasks = (todayTasksByDate[ds] || []).filter(function(t) { return t.done; });
-  if (!tasks.length) {
-    alert(ds + ' 날짜에 완료된 할일이 없습니다.');
-    return;
-  }
-  // 프로젝트별로 그룹
-  var groups = {};
-  tasks.forEach(function(t) {
-    var k = t.projName || '기타';
-    if (!groups[k]) groups[k] = {color: t.projColor, items: []};
-    groups[k].items.push(t);
-  });
-  var html = '<h3>' + ds + ' 완료된 할일</h3>'
-    + '<div style="font-size:11px;color:var(--text3);margin-bottom:10px">선택한 항목이 업무내용에 입력됩니다</div>'
-    + Object.keys(groups).map(function(projName) {
-        var g = groups[projName];
-        return '<div style="margin-bottom:10px">'
-          + '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;display:flex;align-items:center;gap:5px">'
-          + '<span style="width:7px;height:7px;border-radius:50%;background:' + g.color + ';display:inline-block"></span>' + projName + '</div>'
-          + g.items.map(function(t) {
-              return '<div class="pick-task-item" data-text="' + t.text.replace(/"/g,'&quot;') + '" data-cat="' + (t.subCat||'').replace(/"/g,'&quot;') + '" data-proj-id="' + (t.projId||'') + '"'
-                + ' style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:0.5px solid var(--border);border-radius:7px;margin-bottom:4px;cursor:pointer;transition:background .1s;background:var(--surface)">'
-                + '<div style="width:15px;height:15px;border:1.5px solid var(--border2);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center" class="pick-check"></div>'
-                + '<div style="flex:1;min-width:0">'
-                + (t.subCat ? '<div style="font-size:10px;color:var(--text3)">' + t.subCat + '</div>' : '')
-                + '<div style="font-size:13px;color:var(--text)">' + t.text + '</div>'
-                + '</div></div>';
-            }).join('')
-          + '</div>';
-      }).join('')
-    + '<div class="modal-actions"><button class="btn-cancel" id="mc-btn">취소</button><button class="btn-save" id="btn-pick-confirm">선택 완료</button></div>';
-  showModal(html);
-  document.getElementById('mc-btn').onclick = closeModal;
-  // 선택된 항목 체크 표시
-  document.querySelectorAll('.pick-task-item').forEach(function(el) {
-    el.addEventListener('click', function() {
-      var chk = el.querySelector('.pick-check');
-      if (el.classList.contains('selected')) {
-        el.classList.remove('selected');
-        el.style.background = 'var(--surface)';
-        chk.style.background = '';
-        chk.style.borderColor = 'var(--border2)';
-        chk.innerHTML = '';
-      } else {
-        el.classList.add('selected');
-        el.style.background = 'var(--hover)';
-        chk.style.background = 'var(--accent)';
-        chk.style.borderColor = 'var(--accent)';
-        chk.innerHTML = '<div style="width:8px;height:5px;border-left:2px solid var(--accent-text);border-bottom:2px solid var(--accent-text);transform:rotate(-45deg) translate(1px,-1px)"></div>';
-      }
-    });
-  });
-}
-
-function confirmPickTasks() {
-  var selected = document.querySelectorAll('.pick-task-item.selected');
-  if (!selected.length) { alert('항목을 선택해주세요.'); return; }
-  var memos = [];
-  var firstProjId = null;
-  selected.forEach(function(el) {
-    var cat = el.dataset.cat, text = el.dataset.text;
-    memos.push(cat ? '[' + cat + '] ' + text : text);
-    if (!firstProjId && el.dataset.projId) firstProjId = el.dataset.projId;
-  });
-  document.getElementById('ts-memo').value = memos.join(' / ');
-  // 프로젝트 자동 선택
-  if (firstProjId) {
-    var sel = document.getElementById('ts-pname');
-    if (sel) { sel.value = firstProjId; syncTsNo(); updateTsBar(); }
-  }
-  closeModal();
-}
+function renderTs() {
   updateTsSelect();
   var tbody = document.getElementById('ts-tbody'); if (!tbody) return;
   if (!tsRows.length) {
@@ -1497,28 +1386,15 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// ── Column Resize (with localStorage save) ──
-var COL_WIDTHS_KEY = 'ts_col_widths';
-function saveColWidths() {
-  var ths = document.querySelectorAll('#ts-table thead th');
-  var widths = Array.prototype.slice.call(ths).map(function(th) { return th.offsetWidth; });
-  localStorage.setItem(COL_WIDTHS_KEY, JSON.stringify(widths));
-}
-function loadColWidths() {
-  try {
-    var saved = JSON.parse(localStorage.getItem(COL_WIDTHS_KEY));
-    if (!saved || !saved.length) return;
-    var ths = document.querySelectorAll('#ts-table thead th');
-    saved.forEach(function(w, i) { if (ths[i] && w > 30) ths[i].style.width = w + 'px'; });
-  } catch(e) {}
-}
+// ── Column Resize ──
 (function() {
-  var startX, startW, th;
+  var startX, startW, th, colIdx;
   document.addEventListener('mousedown', startResize);
   document.addEventListener('touchstart', startResize, {passive:false});
   function startResize(e) {
     var r = e.target.closest('.col-resizer'); if (!r) return;
     e.preventDefault();
+    colIdx = parseInt(r.dataset.col);
     th = r.parentElement;
     startX = e.touches ? e.touches[0].clientX : e.clientX;
     startW = th.offsetWidth;
@@ -1531,10 +1407,11 @@ function loadColWidths() {
   function onMove(e) {
     if (!th) return;
     var x = e.touches ? e.touches[0].clientX : e.clientX;
-    th.style.width = Math.max(50, startW + x - startX) + 'px';
+    var newW = Math.max(50, startW + x - startX);
+    th.style.width = newW + 'px';
   }
   function onUp() {
-    if (th) { th.querySelector('.col-resizer').classList.remove('dragging'); saveColWidths(); th = null; }
+    if (th) { th.querySelector('.col-resizer').classList.remove('dragging'); th = null; }
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('touchmove', onMove);
     document.removeEventListener('mouseup', onUp);
