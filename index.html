@@ -758,11 +758,19 @@ function fmtMembers(members) {
 function renderPD(p) {
   var c = gc(p.cat);
   var subs = (p.subtasks || []).slice();
+  // 완료된 항목: doneAt 오름차순(오래된 완료가 위, 최근 완료가 아래), 미완료: 완료 항목 앞에
+  subs.sort(function(a, b) {
+    if (!a.done && !b.done) return 0;
+    if (!a.done && b.done) return -1;
+    if (a.done && !b.done) return 1;
+    return (a.doneAt || 0) - (b.doneAt || 0);
+  });
+  // origIdx는 정렬 후 인덱스로 재매핑
   var catGroups = {};
-  subs.forEach(function(s, origIdx) {
+  subs.forEach(function(s, sortedIdx) {
     var key = s.cat || '기타';
     if (!catGroups[key]) catGroups[key] = [];
-    catGroups[key].push({s:s, origIdx:origIdx});
+    catGroups[key].push({s: s, origIdx: sortedIdx});
   });
   var catKeys = Object.keys(catGroups).sort(function(a,b){ return b.localeCompare(a,'ko'); });
   var subsHtml = catKeys.map(function(cat) {
@@ -906,19 +914,32 @@ function addSub(pid) {
   subs.push({cat: cat ? cat.value.trim() : '', text: txt.value.trim(), done: false, doneAt: null});
   fsUpdate('projects', pid, {subtasks: subs});
 }
+function getSortedSubs(p) {
+  var subs = (p.subtasks || []).slice();
+  subs.sort(function(a, b) {
+    if (!a.done && !b.done) return 0;
+    if (!a.done && b.done) return -1;
+    if (a.done && !b.done) return 1;
+    return (a.doneAt || 0) - (b.doneAt || 0);
+  });
+  return subs;
+}
 function toggleSub(pid, idx) {
   var p = projects.find(function(x) { return x.id === pid; }); if (!p) return;
-  var s = (p.subtasks || []).slice();
-  s[idx] = Object.assign({}, s[idx], {done: !s[idx].done, doneAt: !s[idx].done ? Date.now() : null});
-  fsUpdate('projects', pid, {subtasks: s});
+  var subs = getSortedSubs(p);
+  subs[idx] = Object.assign({}, subs[idx], {done: !subs[idx].done, doneAt: !subs[idx].done ? Date.now() : null});
+  fsUpdate('projects', pid, {subtasks: subs});
 }
 function delSub(pid, idx) {
   var p = projects.find(function(x) { return x.id === pid; }); if (!p) return;
-  fsUpdate('projects', pid, {subtasks: (p.subtasks||[]).filter(function(_,i){ return i !== idx; })});
+  var subs = getSortedSubs(p);
+  subs.splice(idx, 1);
+  fsUpdate('projects', pid, {subtasks: subs});
 }
 function openEditSub(pid, idx) {
   var p = projects.find(function(x) { return x.id === pid; }); if (!p) return;
-  var s = (p.subtasks||[])[idx]; if (!s) return;
+  var subs = getSortedSubs(p);
+  var s = subs[idx]; if (!s) return;
   showModal('<h3>하위 항목 편집</h3>'
     + '<div class="form-row"><label>분류</label><input id="es-cat" value="' + (s.cat||'') + '" placeholder="분류"></div>'
     + '<div class="form-row"><label>세부내용</label><input id="es-txt" value="' + (s.text||'') + '" placeholder="세부내용"></div>'
@@ -926,9 +947,9 @@ function openEditSub(pid, idx) {
   document.getElementById('mc-btn').onclick = closeModal;
   document.getElementById('ms-btn').onclick = function() {
     var p2 = projects.find(function(x) { return x.id === pid; }); if (!p2) return;
-    var s2 = (p2.subtasks||[]).slice();
-    s2[idx] = Object.assign({}, s2[idx], {cat: document.getElementById('es-cat').value, text: document.getElementById('es-txt').value});
-    fsUpdate('projects', pid, {subtasks: s2}).then(closeModal);
+    var subs2 = getSortedSubs(p2);
+    subs2[idx] = Object.assign({}, subs2[idx], {cat: document.getElementById('es-cat').value, text: document.getElementById('es-txt').value});
+    fsUpdate('projects', pid, {subtasks: subs2}).then(closeModal);
   };
 }
 function delProj(id) {
