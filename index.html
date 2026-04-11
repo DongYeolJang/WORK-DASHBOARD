@@ -1267,10 +1267,9 @@ function renderCompletedTasks() {
   var wrap = document.getElementById('ts-completed-wrap');
   var list = document.getElementById('ts-completed-list');
   if (!wrap || !list) return;
-  var pid = document.getElementById('ts-pname').value;
   var ds = document.getElementById('ts-date').value;
-  if (!pid || !ds) { wrap.style.display = 'none'; return; }
-  var done = (todayTasksByDate[ds] || []).filter(function(t){ return t.done && t.projId === pid; });
+  if (!ds) { wrap.style.display = 'none'; return; }
+  var done = (todayTasksByDate[ds] || []).filter(function(t){ return t.done; });
   if (!done.length) { wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
   list.innerHTML = done.map(function(t) {
